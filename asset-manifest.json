@@ -1,10 +1,13 @@
 {
   "files": {
+    "main.css": "/trading-card-tracker/static/css/main.f7c74264.css",
     "main.js": "/trading-card-tracker/static/js/main.607cc17e.js",
     "index.html": "/trading-card-tracker/index.html",
+    "main.f7c74264.css.map": "/trading-card-tracker/static/css/main.f7c74264.css.map",
     "main.607cc17e.js.map": "/trading-card-tracker/static/js/main.607cc17e.js.map"
   },
   "entrypoints": [
+    "static/css/main.f7c74264.css",
     "static/js/main.607cc17e.js"
   ]
 }
