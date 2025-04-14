@@ -322,7 +322,6 @@ export default function TradingCardTracker() {
         </button>
       </div>
       
-      {/* Rest of your component - UI stays the same */}
       {/* Add Card Button */}
       <div className="mb-4">
         <button
@@ -395,13 +394,210 @@ export default function TradingCardTracker() {
             )}
           </div>
           
-          {/* Rest of your component - Keeping the same structure */}
-          {/* ... */}
+         {/* Shipping supplies section */}
+         <div className="mb-8">
+            <h2 className="text-xl font-semibold mb-4">Shipping Supplies</h2>
+            
+            {/* Supplies list */}
+            <div className="bg-gray-100 p-4 rounded">
+              {supplies.map(supply => (
+                <div key={supply.id} className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <button
+                      onClick={() => updateSupplyQuantity(supply.id, -1)}
+                      className="text-red-500 mr-2"
+                    >
+                      <MinusCircle size={20} />
+                    </button>
+                    <span className="w-10 text-center">{supply.quantity}</span>
+                    <button
+                      onClick={() => updateSupplyQuantity(supply.id, 1)}
+                      className="text-green-500 ml-2 mr-4"
+                    >
+                      <PlusCircle size={20} />
+                    </button>
+                    <span>{supply.name}</span>
+                  </div>
+                  <div>${supply.total.toFixed(2)}</div>
+                </div>
+              ))}
+              
+              {/* Misc supplies */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="flex items-center">
+                  <span className="mr-4">Misc Supplies</span>
+                  <button
+                    onClick={() => setShowMiscSuppliesModal(true)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Manage
+                  </button>
+                </div>
+                <div>${totalMiscCost.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Summary section */}
+          <div className="bg-blue-100 p-4 rounded">
+            <h2 className="text-xl font-semibold mb-2">Summary</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <div>Total Cards Cost:</div>
+              <div>${totalBought.toFixed(2)}</div>
+              
+              <div>Total Sales:</div>
+              <div>${totalSold.toFixed(2)}</div>
+              
+              <div>Total Standard Supplies Cost:</div>
+              <div>${totalSuppliesCost.toFixed(2)}</div>
+              
+              <div>Total Misc Supplies Cost:</div>
+              <div>${totalMiscCost.toFixed(2)}</div>
+              
+              <div className="font-bold">Total Profit:</div>
+              <div className={`font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${totalProfit.toFixed(2)}
+              </div>
+            </div>
+          </div>
         </div>
       )}
       
-      {/* For Sale and Keeping tabs remain the same structure with Firebase methods */}
-      {/* ... */}
+{/* For Sale Tab Content */}
+{activeTab === 'forSale' && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Cards For Sale</h2>
+          
+          {/* Card list header */}
+          <div className="grid grid-cols-6 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
+            <div>Name</div>
+            <div>Bought For</div>
+            <div>Sold For</div>
+            <div>Date Bought</div>
+            <div>Status</div>
+            <div>Actions</div>
+          </div>
+          
+          {/* Card list */}
+          <div className="mb-4">
+            {currentCards.length > 0 ? (
+              currentCards.map(card => (
+                <div key={card.id} className="grid grid-cols-6 gap-2 p-2 border-b items-center">
+                  <div>{card.name}</div>
+                  <div>${card.boughtFor.toFixed(2)}</div>
+                  <div>
+                    <input
+                      type="number"
+                      className="p-1 border rounded w-24"
+                      value={card.soldFor}
+                      onChange={(e) => updateCard(card.id, { soldFor: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>{card.dateBought}</div>
+                  <div>
+                    <select
+                      className="p-1 border rounded"
+                      value={card.status}
+                      onChange={(e) => updateCard(card.id, { status: e.target.value })}
+                    >
+                      <option value="forSale">For Sale</option>
+                      <option value="sold">Sold</option>
+                      <option value="keeping">Keeping</option>
+                    </select>
+                  </div>
+                  <div className="flex">
+                    <button
+                      onClick={() => updateCard(card.id, { status: "sold", dateSold: new Date().toISOString().split('T')[0] })}
+                      className="text-blue-500 mr-2"
+                      title="Mark as Sold"
+                    >
+                      <ArrowRight size={20} />
+                    </button>
+                    <button
+                      onClick={() => deleteCard(card.id)}
+                      className="text-red-500"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 text-center text-gray-500">No cards for sale found.</div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Keeping Tab Content */}
+      {activeTab === 'keeping' && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Cards I'm Keeping</h2>
+          
+          {/* Card list header */}
+          <div className="grid grid-cols-4 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
+            <div>Name</div>
+            <div>Bought For</div>
+            <div>Date Bought</div>
+            <div>Actions</div>
+          </div>
+          
+          {/* Card list */}
+          <div className="mb-4">
+            {currentCards.length > 0 ? (
+              currentCards.map(card => (
+                <div key={card.id} className="grid grid-cols-4 gap-2 p-2 border-b items-center">
+                  <div>{card.name}</div>
+                  <div>${card.boughtFor.toFixed(2)}</div>
+                  <div>{card.dateBought}</div>
+                  <div className="flex">
+                    <button
+                      onClick={() => updateCard(card.id, { status: "forSale" })}
+                      className="text-blue-500 mr-2"
+                      title="Move to For Sale"
+                    >
+                      <ArrowRight size={20} />
+                    </button>
+                    <button
+                      onClick={() => deleteCard(card.id)}
+                      className="text-red-500"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 text-center text-gray-500">No cards being kept found.</div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Pagination Controls */}
+      {filteredCards.length > cardsPerPage && (
+        <div className="flex justify-center mt-4 mb-4">
+          <button
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`mx-1 px-3 py-1 rounded ${currentPage === 1 ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400'}`}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          
+          <div className="flex items-center mx-2">
+            <span>Page {currentPage} of {totalPages}</span>
+          </div>
+          
+          <button
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`mx-1 px-3 py-1 rounded ${currentPage === totalPages ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-300 hover:bg-gray-400'}`}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
       
       {/* Add Card Modal */}
       {showAddCardModal && (
@@ -501,8 +697,89 @@ export default function TradingCardTracker() {
         </div>
       )}
       
-      {/* Misc Supplies Modal - Structure remains same, methods updated for Firebase */}
-      {/* ... */}
+ {/* Misc Supplies Modal */}
+ {showMiscSuppliesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Manage Miscellaneous Supplies</h3>
+              <button onClick={() => setShowMiscSuppliesModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={24} />
+              </button>
+            </div>
+            
+            {/* Current Misc Supplies */}
+            <div className="mb-6">
+              <h4 className="font-medium mb-2">Current Supplies</h4>
+              {miscSupplies.length > 0 ? (
+                <div className="bg-gray-100 p-2 rounded">
+                  {miscSupplies.map(item => (
+                    <div key={item.id} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                      <span>{item.name}</span>
+                      <div className="flex items-center">
+                        <span className="mr-4">${item.price.toFixed(2)}</span>
+                        <button
+                          onClick={() => removeMiscSupply(item.id)}
+                          className="text-red-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 italic">No miscellaneous supplies added yet.</div>
+              )}
+            </div>
+            
+            {/* Add New Misc Supply */}
+            <div className="mb-4">
+              <h4 className="font-medium mb-2">Add New Supply</h4>
+              <div className="flex items-end gap-2">
+                <div className="flex-grow">
+                  <label className="block text-sm mb-1">Name</label>
+                  <input
+                    type="text"
+                    className="p-2 border rounded w-full"
+                    value={newMiscSupply.name}
+                    onChange={(e) => setNewMiscSupply({...newMiscSupply, name: e.target.value})}
+                    placeholder="e.g., Team Bag, Card Saver"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Price ($)</label>
+                  <input
+                    type="number"
+                    className="p-2 border rounded w-24"
+                    value={newMiscSupply.price}
+                    onChange={(e) => setNewMiscSupply({...newMiscSupply, price: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                <button
+                  className="bg-green-500 text-white px-4 py-2 rounded"
+                  onClick={addMiscSupply}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center pt-4 border-t">
+              <div>
+                <span className="font-bold">Total: ${totalMiscCost.toFixed(2)}</span>
+              </div>
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded"
+                onClick={() => setShowMiscSuppliesModal(false)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
