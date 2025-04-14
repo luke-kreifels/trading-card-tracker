@@ -2,7 +2,7 @@ import React from 'react';
 
 import { useState, useEffect } from 'react';
 import { PlusCircle, MinusCircle, Trash2, ArrowRight, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { db } from './firebase';
+import { db } from '../firebase';
 import { 
   collection, 
   addDoc, 
