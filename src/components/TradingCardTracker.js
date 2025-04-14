@@ -298,7 +298,7 @@ export default function TradingCardTracker() {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Trading Card Sales Tracker</h1>
+      <h1 className="text-2xl font-bold mb-6">Trading Card Tracker</h1>
       
       {/* Tab Navigation */}
       <div className="flex mb-4">
@@ -306,7 +306,7 @@ export default function TradingCardTracker() {
           className={`px-4 py-2 rounded mr-2 ${activeTab === 'sales' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
           onClick={() => setActiveTab('sales')}
         >
-          Sales
+          Sold
         </button>
         <button 
           className={`px-4 py-2 rounded mr-2 ${activeTab === 'forSale' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
