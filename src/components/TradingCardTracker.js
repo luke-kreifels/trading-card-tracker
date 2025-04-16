@@ -425,36 +425,37 @@ export default function TradingCardTracker() {
         <h1 className="text-2xl font-bold mb-6">Loading...</h1>
       </div>
     );
-
-    const CardNotes = ({ notes }) => {
-      const [showNotes, setShowNotes] = useState(false);
-      
-      return (
-        <div className="relative">
-          <button
-            onMouseEnter={() => setShowNotes(true)}
-            onMouseLeave={() => setShowNotes(false)}
-            className="text-gray-500 hover:text-blue-500"
-            title="View Notes"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-          </button>
-          
-          {showNotes && (
-            <div className="absolute z-10 w-64 p-3 bg-white border rounded shadow-lg right-0 transform translate-x-6">
-              <div className="text-sm whitespace-pre-wrap">{notes}</div>
-            </div>
-          )}
-        </div>
-      );
-    };
   }
+
+  
+  const CardNotes = ({ notes }) => {
+    const [showNotes, setShowNotes] = useState(false);
+    
+    return (
+      <div className="relative">
+        <button
+          onMouseEnter={() => setShowNotes(true)}
+          onMouseLeave={() => setShowNotes(false)}
+          className="text-gray-500 hover:text-blue-500"
+          title="View Notes"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </button>
+        
+        {showNotes && (
+          <div className="absolute z-10 w-64 p-3 bg-white border rounded shadow-lg right-0 transform translate-x-6">
+            <div className="text-sm whitespace-pre-wrap">{notes}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
