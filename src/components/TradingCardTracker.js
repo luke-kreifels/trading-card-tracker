@@ -814,7 +814,7 @@ export default function TradingCardTracker() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Card Name</label>
                 <input
@@ -881,6 +881,15 @@ export default function TradingCardTracker() {
                     </>
                   )}
                 </div>
+                <div className="col-span-1 md:col-span-2"> {/* This makes it span the full width */}
+                <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
+              <textarea
+                className="p-2 border rounded w-full h-24"
+                value={newCard.notes}
+                onChange={(e) => setNewCard({...newCard, notes: e.target.value})}
+                placeholder="Add any details about condition, rarity, or other information..."
+              />
+            </div>
                 
                 <div className="flex justify-end">
                   <button
@@ -897,15 +906,6 @@ export default function TradingCardTracker() {
                   </button>
                 </div>
               </div>
-              <div className="col-span-1 md:col-span-2"> {/* This makes it span the full width */}
-                <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
-              <textarea
-                className="p-2 border rounded w-full h-24"
-                value={newCard.notes}
-                onChange={(e) => setNewCard({...newCard, notes: e.target.value})}
-                placeholder="Add any details about condition, rarity, or other information..."
-              />
-            </div>
             </div>
           )}
     
@@ -923,7 +923,7 @@ export default function TradingCardTracker() {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Card Name</label>
                     <input
