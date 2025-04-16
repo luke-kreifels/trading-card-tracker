@@ -1,16 +1,7 @@
+import React from 'react';
+
 import { useState, useEffect } from 'react';
-import { 
-  PlusCircle, 
-  MinusCircle, 
-  Trash2, 
-  ArrowRight, 
-  Search, 
-  ChevronLeft, 
-  ChevronRight, 
-  X, 
-  Edit, 
-  Save
-} from 'lucide-react';
+import { PlusCircle, MinusCircle, Trash2, ArrowRight, Search, ChevronLeft, ChevronRight, X, Edit2 } from 'lucide-react';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -47,32 +38,19 @@ export default function TradingCardTracker() {
     dateSold: ""
   });
   
-  // State for card editing
-  const [editingCard, setEditingCard] = useState(null);
-  
   // State for new misc supply
   const [newMiscSupply, setNewMiscSupply] = useState({
     name: "",
     price: 0
   });
-  
-  // State for delete confirmation
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [cardToDelete, setCardToDelete] = useState(null);
-  
-  // State for shipping supplies editor modal
-  const [showSuppliesModal, setShowSuppliesModal] = useState(false);
-  
-  // State for new shipping supply
+
+  // State for new supply
   const [newSupply, setNewSupply] = useState({
     name: "",
     quantity: 0,
     cost: 0,
     total: 0
   });
-  
-  // State for supply editing
-  const [editingSupply, setEditingSupply] = useState(null);
   
   // Search and pagination states
   const [searchTerm, setSearchTerm] = useState("");
@@ -81,8 +59,15 @@ export default function TradingCardTracker() {
   
   // Modal states
   const [showAddCardModal, setShowAddCardModal] = useState(false);
-  const [showMiscSuppliesModal, setShowMiscSuppliesModal] = useState(false);
   const [showEditCardModal, setShowEditCardModal] = useState(false);
+  const [showMiscSuppliesModal, setShowMiscSuppliesModal] = useState(false);
+  const [showSuppliesModal, setShowSuppliesModal] = useState(false);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  
+  // Currently editing item states
+  const [currentEditCard, setCurrentEditCard] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState('');
   
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -197,37 +182,29 @@ export default function TradingCardTracker() {
       console.error("Error adding card: ", error);
     }
   };
-  
-  // Function to handle edit button click
-  const handleEditCard = (card) => {
-    setEditingCard({...card});
-    setShowEditCardModal(true);
-  };
-  
-  // Function to save edited card
+
+  // Function to save edited card to Firebase
   const saveEditedCard = async () => {
-    if (!editingCard || !editingCard.id) return;
+    if (!currentEditCard || currentEditCard.name.trim() === "") return;
     
     try {
-      const cardDoc = doc(db, "cards", editingCard.id);
+      const cardDoc = doc(db, "cards", currentEditCard.id);
       
       // Handle status changes
-      const updates = {...editingCard};
-      updates.isSold = updates.status === "sold";
-      
-      // If moved to sold and no sold date, set it
+      let updates = { ...currentEditCard };
       if (updates.status === "sold" && !updates.dateSold) {
         updates.dateSold = new Date().toISOString().split('T')[0];
       }
       
-      // If moved from sold, clear sold date
       if (updates.status !== "sold") {
         updates.dateSold = "";
       }
       
+      updates.isSold = updates.status === "sold";
+      
       await updateDoc(cardDoc, updates);
       setShowEditCardModal(false);
-      setEditingCard(null);
+      setCurrentEditCard(null);
     } catch (error) {
       console.error("Error updating card: ", error);
     }
@@ -253,21 +230,19 @@ export default function TradingCardTracker() {
     }
   };
   
-  // Function to add a new shipping supply
+  // Function to add a new supply to Firebase
   const addSupply = async () => {
     if (newSupply.name.trim() === "") return;
     
     try {
       const suppliesCollection = collection(db, "supplies");
-      
-      // Calculate total from quantity and cost
       const total = parseFloat(newSupply.quantity) * parseFloat(newSupply.cost);
       
       await addDoc(suppliesCollection, {
         name: newSupply.name,
         quantity: parseInt(newSupply.quantity),
         cost: parseFloat(newSupply.cost),
-        total: parseFloat(total.toFixed(2))
+        total: total
       });
       
       setNewSupply({
@@ -280,35 +255,17 @@ export default function TradingCardTracker() {
       console.error("Error adding supply: ", error);
     }
   };
-  
-  // Function to update shipping supply
-  const saveEditedSupply = async () => {
-    if (!editingSupply || !editingSupply.id) return;
-    
-    try {
-      const supplyDoc = doc(db, "supplies", editingSupply.id);
-      
-      // Calculate new total
-      const newTotal = parseFloat(editingSupply.quantity) * parseFloat(editingSupply.cost);
-      const updates = {
-        ...editingSupply,
-        total: parseFloat(newTotal.toFixed(2))
-      };
-      
-      await updateDoc(supplyDoc, updates);
-      setEditingSupply(null);
-    } catch (error) {
-      console.error("Error updating supply: ", error);
-    }
-  };
-  
-  // Function to delete shipping supply
-  const deleteSupply = async (id) => {
+
+  // Function to update a supply in Firebase
+  const updateSupply = async (id, updates) => {
     try {
       const supplyDoc = doc(db, "supplies", id);
-      await deleteDoc(supplyDoc);
+      const total = parseFloat(updates.quantity) * parseFloat(updates.cost);
+      updates.total = total;
+      
+      await updateDoc(supplyDoc, updates);
     } catch (error) {
-      console.error("Error deleting supply: ", error);
+      console.error("Error updating supply: ", error);
     }
   };
   
@@ -348,30 +305,54 @@ export default function TradingCardTracker() {
     }
   };
   
-  // Function to initiate card deletion process
-  const initiateDeleteCard = (card) => {
-    setCardToDelete(card);
-    setShowDeleteConfirm(true);
-  };
-  
-  // Function to confirm and delete card from Firebase
-  const confirmDeleteCard = async () => {
-    if (!cardToDelete || !cardToDelete.id) return;
+  // Function to delete card from Firebase
+  const deleteCard = async () => {
+    if (!itemToDelete) return;
     
     try {
-      const cardDoc = doc(db, "cards", cardToDelete.id);
+      const cardDoc = doc(db, "cards", itemToDelete);
       await deleteDoc(cardDoc);
-      setShowDeleteConfirm(false);
-      setCardToDelete(null);
+      setShowDeleteConfirmModal(false);
+      setItemToDelete(null);
     } catch (error) {
       console.error("Error deleting card: ", error);
     }
   };
-  
-  // Function to cancel card deletion
-  const cancelDeleteCard = () => {
-    setShowDeleteConfirm(false);
-    setCardToDelete(null);
+
+  // Function to delete supply from Firebase
+  const deleteSupply = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      const supplyDoc = doc(db, "supplies", itemToDelete);
+      await deleteDoc(supplyDoc);
+      setShowDeleteConfirmModal(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error("Error deleting supply: ", error);
+    }
+  };
+
+  // Function to handle delete based on type
+  const handleDelete = async () => {
+    if (!itemToDelete || !deleteType) return;
+    
+    if (deleteType === 'card') {
+      await deleteCard();
+    } else if (deleteType === 'supply') {
+      await deleteSupply();
+    } else if (deleteType === 'miscSupply') {
+      await removeMiscSupply(itemToDelete);
+      setShowDeleteConfirmModal(false);
+      setItemToDelete(null);
+    }
+  };
+
+  // Function to initiate delete process
+  const confirmDelete = (id, type) => {
+    setItemToDelete(id);
+    setDeleteType(type);
+    setShowDeleteConfirmModal(true);
   };
   
   // Function to update supply quantity in Firebase
@@ -428,6 +409,12 @@ export default function TradingCardTracker() {
     setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
   };
 
+  // Function to open edit card modal
+  const openEditCardModal = (card) => {
+    setCurrentEditCard({...card});
+    setShowEditCardModal(true);
+  };
+
   // Show loading indicator
   if (loading) {
     return (
@@ -439,7 +426,7 @@ export default function TradingCardTracker() {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Trading Card Sales Tracker</h1>
+      <h1 className="text-2xl font-bold mb-6">Trading Card Tracker</h1>
       
       {/* Tab Navigation */}
       <div className="flex mb-4">
@@ -447,7 +434,7 @@ export default function TradingCardTracker() {
           className={`px-4 py-2 rounded mr-2 ${activeTab === 'sales' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
           onClick={() => setActiveTab('sales')}
         >
-          Sales
+          Sold
         </button>
         <button 
           className={`px-4 py-2 rounded mr-2 ${activeTab === 'forSale' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
@@ -504,7 +491,7 @@ export default function TradingCardTracker() {
             <div>Profit</div>
             <div>Date Bought</div>
             <div>Date Sold</div>
-            <div colSpan="2">Actions</div>
+            <div colSpan={2}>Actions</div>
           </div>
           
           {/* Card list */}
@@ -520,18 +507,18 @@ export default function TradingCardTracker() {
                   </div>
                   <div>{card.dateBought}</div>
                   <div>{card.dateSold}</div>
-                  <div>
+                  <div className="flex">
                     <button
-                      onClick={() => handleEditCard(card)}
+                      onClick={() => openEditCardModal(card)}
                       className="text-blue-500 mr-2"
+                      title="Edit Card"
                     >
-                      <Edit size={20} />
+                      <Edit2 size={20} />
                     </button>
-                  </div>
-                  <div>
                     <button
-                      onClick={() => initiateDeleteCard(card)}
+                      onClick={() => confirmDelete(card.id, 'card')}
                       className="text-red-500"
+                      title="Delete Card"
                     >
                       <Trash2 size={20} />
                     </button>
@@ -543,15 +530,15 @@ export default function TradingCardTracker() {
             )}
           </div>
           
-          {/* Shipping supplies section */}
-          <div className="mb-8">
+         {/* Shipping supplies section */}
+         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Shipping Supplies</h2>
               <button
                 onClick={() => setShowSuppliesModal(true)}
                 className="bg-blue-500 text-white px-3 py-1 rounded text-sm flex items-center"
               >
-                <Edit size={16} className="mr-1" />
+                <Edit2 size={16} className="mr-1" />
                 Edit Supplies
               </button>
             </div>
@@ -586,8 +573,9 @@ export default function TradingCardTracker() {
                   <span className="mr-4">Misc Supplies</span>
                   <button
                     onClick={() => setShowMiscSuppliesModal(true)}
-                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                    className="bg-blue-500 text-white px-3 py-1 rounded text-sm flex items-center"
                   >
+                    <Edit2 size={16} className="mr-1" />
                     Manage
                   </button>
                 </div>
@@ -633,7 +621,7 @@ export default function TradingCardTracker() {
             <div>Sold For</div>
             <div>Date Bought</div>
             <div>Status</div>
-            <div colSpan="2">Actions</div>
+            <div colSpan={2}>Actions</div>
           </div>
           
           {/* Card list */}
@@ -663,18 +651,23 @@ export default function TradingCardTracker() {
                       <option value="keeping">Keeping</option>
                     </select>
                   </div>
-                  <div>
+                  <div className="flex col-span-2">
                     <button
-                      onClick={() => handleEditCard(card)}
+                      onClick={() => updateCard(card.id, { status: "sold", dateSold: new Date().toISOString().split('T')[0] })}
+                      className="text-blue-500 mr-2"
+                      title="Mark as Sold"
+                    >
+                      <ArrowRight size={20} />
+                    </button>
+                    <button
+                      onClick={() => openEditCardModal(card)}
                       className="text-blue-500 mr-2"
                       title="Edit Card"
                     >
-                      <Edit size={20} />
+                      <Edit2 size={20} />
                     </button>
-                  </div>
-                  <div>
                     <button
-                      onClick={() => initiateDeleteCard(card)}
+                      onClick={() => confirmDelete(card.id, 'card')}
                       className="text-red-500"
                       title="Delete Card"
                     >
@@ -700,7 +693,7 @@ export default function TradingCardTracker() {
             <div>Name</div>
             <div>Bought For</div>
             <div>Date Bought</div>
-            <div colSpan="2">Actions</div>
+            <div colSpan={2}>Actions</div>
           </div>
           
           {/* Card list */}
@@ -711,18 +704,23 @@ export default function TradingCardTracker() {
                   <div>{card.name}</div>
                   <div>${card.boughtFor.toFixed(2)}</div>
                   <div>{card.dateBought}</div>
-                  <div>
+                  <div className="flex col-span-2">
                     <button
-                      onClick={() => handleEditCard(card)}
+                      onClick={() => updateCard(card.id, { status: "forSale" })}
+                      className="text-blue-500 mr-2"
+                      title="Move to For Sale"
+                    >
+                      <ArrowRight size={20} />
+                    </button>
+                    <button
+                      onClick={() => openEditCardModal(card)}
                       className="text-blue-500 mr-2"
                       title="Edit Card"
                     >
-                      <Edit size={20} />
+                      <Edit2 size={20} />
                     </button>
-                  </div>
-                  <div>
                     <button
-                      onClick={() => initiateDeleteCard(card)}
+                      onClick={() => confirmDelete(card.id, 'card')}
                       className="text-red-500"
                       title="Delete Card"
                     >
@@ -791,159 +789,418 @@ export default function TradingCardTracker() {
                   type="number"
                   className="p-2 border rounded w-full"
                   value={newCard.boughtFor}
-                  onChange={(e) => setNewCard({...newCard, boughtFor: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Date Bought</label>
-                <input
-                  type="date"
-                  className="p-2 border rounded w-full"
-                  value={newCard.dateBought}
-                  onChange={(e) => setNewCard({...newCard, dateBought: e.target.value})}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Status</label>
-                <select
-                  className="p-2 border rounded w-full"
-                  value={newCard.status}
-                  onChange={(e) => setNewCard({...newCard, status: e.target.value})}
-                >
-                  <option value="forSale">For Sale</option>
-                  <option value="sold">Sold</option>
-                  <option value="keeping">Keeping</option>
-                </select>
-              </div>
-              
-              {newCard.status === "sold" && (
-                <>
+                  onChange={(e) => setNewCard({...newCard, boughtFor: e.target.value})}/>
+                  </div>
+                  
                   <div>
-                    <label className="block text-sm font-medium mb-1">Sold For ($)</label>
+                    <label className="block text-sm font-medium mb-1">Date Bought</label>
                     <input
-                      type="number"
+                      type="date"
                       className="p-2 border rounded w-full"
-                      value={newCard.soldFor}
-                      onChange={(e) => setNewCard({...newCard, soldFor: e.target.value})}
+                      value={newCard.dateBought}
+                      onChange={(e) => setNewCard({...newCard, dateBought: e.target.value})}
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium mb-1">Date Sold</label>
+                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <select
+                      className="p-2 border rounded w-full"
+                      value={newCard.status}
+                      onChange={(e) => setNewCard({...newCard, status: e.target.value})}
+                    >
+                      <option value="forSale">For Sale</option>
+                      <option value="sold">Sold</option>
+                      <option value="keeping">Keeping</option>
+                    </select>
+                  </div>
+                  
+                  {newCard.status === "sold" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Sold For ($)</label>
+                        <input
+                          type="number"
+                          className="p-2 border rounded w-full"
+                          value={newCard.soldFor}
+                          onChange={(e) => setNewCard({...newCard, soldFor: e.target.value})}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Date Sold</label>
+                        <input
+                          type="date"
+                          className="p-2 border rounded w-full"
+                          value={newCard.dateSold}
+                          onChange={(e) => setNewCard({...newCard, dateSold: e.target.value})}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                <div className="flex justify-end">
+                  <button
+                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2"
+                    onClick={() => setShowAddCardModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="bg-green-500 text-white px-4 py-2 rounded"
+                    onClick={addCard}
+                  >
+                    Add Card
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+    
+          {/* Edit Card Modal */}
+          {showEditCardModal && currentEditCard && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">Edit Card</h3>
+                  <button onClick={() => {
+                    setShowEditCardModal(false);
+                    setCurrentEditCard(null);
+                  }} className="text-gray-500 hover:text-gray-700">
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Card Name</label>
+                    <input
+                      type="text"
+                      className="p-2 border rounded w-full"
+                      value={currentEditCard.name}
+                      onChange={(e) => setCurrentEditCard({...currentEditCard, name: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Bought For ($)</label>
+                    <input
+                      type="number"
+                      className="p-2 border rounded w-full"
+                      value={currentEditCard.boughtFor}
+                      onChange={(e) => setCurrentEditCard({...currentEditCard, boughtFor: parseFloat(e.target.value) || 0})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Date Bought</label>
                     <input
                       type="date"
                       className="p-2 border rounded w-full"
-                      value={newCard.dateSold}
-                      onChange={(e) => setNewCard({...newCard, dateSold: e.target.value})}
+                      value={currentEditCard.dateBought}
+                      onChange={(e) => setCurrentEditCard({...currentEditCard, dateBought: e.target.value})}
                     />
                   </div>
-                </>
-              )}
-            </div>
-            
-            <div className="flex justify-end">
-              <button
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2"
-                onClick={() => setShowAddCardModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="bg-green-500 text-white px-4 py-2 rounded"
-                onClick={addCard}
-              >
-                Add Card
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
- {/* Misc Supplies Modal */}
- {showMiscSuppliesModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Manage Miscellaneous Supplies</h3>
-              <button onClick={() => setShowMiscSuppliesModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={24} />
-              </button>
-            </div>
-            
-            {/* Current Misc Supplies */}
-            <div className="mb-6">
-              <h4 className="font-medium mb-2">Current Supplies</h4>
-              {miscSupplies.length > 0 ? (
-                <div className="bg-gray-100 p-2 rounded">
-                  {miscSupplies.map(item => (
-                    <div key={item.id} className="flex justify-between items-center p-2 border-b last:border-b-0">
-                      <span>{item.name}</span>
-                      <div className="flex items-center">
-                        <span className="mr-4">${item.price.toFixed(2)}</span>
-                        <button
-                          onClick={() => removeMiscSupply(item.id)}
-                          className="text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Status</label>
+                    <select
+                      className="p-2 border rounded w-full"
+                      value={currentEditCard.status}
+                      onChange={(e) => setCurrentEditCard({...currentEditCard, status: e.target.value})}
+                    >
+                      <option value="forSale">For Sale</option>
+                      <option value="sold">Sold</option>
+                      <option value="keeping">Keeping</option>
+                    </select>
+                  </div>
+                  
+                  {currentEditCard.status === "sold" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Sold For ($)</label>
+                        <input
+                          type="number"
+                          className="p-2 border rounded w-full"
+                          value={currentEditCard.soldFor}
+                          onChange={(e) => setCurrentEditCard({...currentEditCard, soldFor: parseFloat(e.target.value) || 0})}
+                        />
                       </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Date Sold</label>
+                        <input
+                          type="date"
+                          className="p-2 border rounded w-full"
+                          value={currentEditCard.dateSold || new Date().toISOString().split('T')[0]}
+                          onChange={(e) => setCurrentEditCard({...currentEditCard, dateSold: e.target.value})}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                <div className="flex justify-end">
+                  <button
+                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2"
+                    onClick={() => {
+                      setShowEditCardModal(false);
+                      setCurrentEditCard(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={saveEditedCard}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Misc Supplies Modal */}
+          {showMiscSuppliesModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">Manage Miscellaneous Supplies</h3>
+                  <button onClick={() => setShowMiscSuppliesModal(false)} className="text-gray-500 hover:text-gray-700">
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                {/* Current Misc Supplies */}
+                <div className="mb-6">
+                  <h4 className="font-medium mb-2">Current Supplies</h4>
+                  {miscSupplies.length > 0 ? (
+                    <div className="bg-gray-100 p-2 rounded">
+                      {miscSupplies.map(item => (
+                        <div key={item.id} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                          <span>{item.name}</span>
+                          <div className="flex items-center">
+                            <span className="mr-4">${item.price.toFixed(2)}</span>
+                            <button
+                              onClick={() => confirmDelete(item.id, 'miscSupply')}
+                              className="text-red-500"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="text-gray-500 italic">No miscellaneous supplies added yet.</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-gray-500 italic">No miscellaneous supplies added yet.</div>
-              )}
-            </div>
-            
-            {/* Add New Misc Supply */}
-            <div className="mb-4">
-              <h4 className="font-medium mb-2">Add New Supply</h4>
-              <div className="flex items-end gap-2">
-                <div className="flex-grow">
-                  <label className="block text-sm mb-1">Name</label>
-                  <input
-                    type="text"
-                    className="p-2 border rounded w-full"
-                    value={newMiscSupply.name}
-                    onChange={(e) => setNewMiscSupply({...newMiscSupply, name: e.target.value})}
-                    placeholder="e.g., Team Bag, Card Saver"
-                  />
+                
+                {/* Add New Misc Supply */}
+                <div className="mb-4">
+                  <h4 className="font-medium mb-2">Add New Supply</h4>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-grow">
+                      <label className="block text-sm mb-1">Name</label>
+                      <input
+                        type="text"
+                        className="p-2 border rounded w-full"
+                        value={newMiscSupply.name}
+                        onChange={(e) => setNewMiscSupply({...newMiscSupply, name: e.target.value})}
+                        placeholder="e.g., Team Bag, Card Saver"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">Price ($)</label>
+                      <input
+                        type="number"
+                        className="p-2 border rounded w-24"
+                        value={newMiscSupply.price}
+                        onChange={(e) => setNewMiscSupply({...newMiscSupply, price: e.target.value})}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <button
+                      className="bg-green-500 text-white px-4 py-2 rounded"
+                      onClick={addMiscSupply}
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm mb-1">Price ($)</label>
-                  <input
-                    type="number"
-                    className="p-2 border rounded w-24"
-                    value={newMiscSupply.price}
-                    onChange={(e) => setNewMiscSupply({...newMiscSupply, price: e.target.value})}
-                    placeholder="0.00"
-                  />
+                
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <div>
+                    <span className="font-bold">Total: ${totalMiscCost.toFixed(2)}</span>
+                  </div>
+                  <button
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={() => setShowMiscSuppliesModal(false)}
+                  >
+                    Done
+                  </button>
                 </div>
-                <button
-                  className="bg-green-500 text-white px-4 py-2 rounded"
-                  onClick={addMiscSupply}
-                >
-                  Add
-                </button>
               </div>
             </div>
-            
-            <div className="flex justify-between items-center pt-4 border-t">
-              <div>
-                <span className="font-bold">Total: ${totalMiscCost.toFixed(2)}</span>
+          )}
+    
+          {/* Shipping Supplies Modal */}
+          {showSuppliesModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">Manage Shipping Supplies</h3>
+                  <button onClick={() => setShowSuppliesModal(false)} className="text-gray-500 hover:text-gray-700">
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                {/* Current Supplies */}
+                <div className="mb-6">
+                  <h4 className="font-medium mb-2">Current Supplies</h4>
+                  {supplies.length > 0 ? (
+                    <div className="bg-gray-100 p-2 rounded">
+                      {supplies.map(supply => (
+                        <div key={supply.id} className="grid grid-cols-5 gap-4 p-2 border-b last:border-b-0 items-center">
+                          <div>{supply.name}</div>
+                          <div>
+                            <label className="block text-xs">Quantity</label>
+                            <input
+                              type="number"
+                              className="p-1 border rounded w-full"
+                              value={supply.quantity}
+                              onChange={(e) => updateSupply(supply.id, {
+                                ...supply,
+                                quantity: parseInt(e.target.value) || 0
+                              })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs">Cost per Unit ($)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              className="p-1 border rounded w-full"
+                              value={supply.cost}
+                              onChange={(e) => updateSupply(supply.id, {
+                                ...supply,
+                                cost: parseFloat(e.target.value) || 0
+                              })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs">Total Cost</label>
+                            <span className="p-1 block">${supply.total.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => confirmDelete(supply.id, 'supply')}
+                              className="text-red-500"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-gray-500 italic">No shipping supplies found.</div>
+                  )}
+                </div>
+                
+                {/* Add New Supply */}
+                <div className="mb-4">
+                  <h4 className="font-medium mb-2">Add New Supply</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm mb-1">Name</label>
+                      <input
+                        type="text"
+                        className="p-2 border rounded w-full"
+                        value={newSupply.name}
+                        onChange={(e) => setNewSupply({...newSupply, name: e.target.value})}
+                        placeholder="e.g., Card Saver, Penny Sleeve"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">Quantity</label>
+                      <input
+                        type="number"
+                        className="p-2 border rounded w-full"
+                        value={newSupply.quantity}
+                        onChange={(e) => setNewSupply({...newSupply, quantity: e.target.value})}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">Cost per Unit ($)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="p-2 border rounded w-full"
+                        value={newSupply.cost}
+                        onChange={(e) => setNewSupply({...newSupply, cost: e.target.value})}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      className="bg-green-500 text-white px-4 py-2 rounded"
+                      onClick={addSupply}
+                    >
+                      Add Supply
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <div>
+                    <span className="font-bold">Total: ${totalSuppliesCost.toFixed(2)}</span>
+                  </div>
+                  <button
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={() => setShowSuppliesModal(false)}
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded"
-                onClick={() => setShowMiscSuppliesModal(false)}
-              >
-                Done
-              </button>
             </div>
-          </div>
+          )}
+    
+          {/* Delete Confirmation Modal */}
+          {showDeleteConfirmModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                <div className="text-center mb-4">
+                  <h3 className="text-xl font-bold">Confirm Delete</h3>
+                  <p className="mt-2">Are you sure you want to delete this item? This action cannot be undone.</p>
+                </div>
+                
+                <div className="flex justify-center gap-4">
+                  <button
+                    className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                    onClick={() => {
+                      setShowDeleteConfirmModal(false);
+                      setItemToDelete(null);
+                      setDeleteType('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-4 py-2 rounded"
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  );
-}
+      );
+    }
