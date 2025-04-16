@@ -1,8 +1,17 @@
-import React from 'react';
-
 import { useState, useEffect } from 'react';
-import { PlusCircle, MinusCircle, Trash2, ArrowRight, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { db } from '../firebase';
+import { 
+  PlusCircle, 
+  MinusCircle, 
+  Trash2, 
+  ArrowRight, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  Edit, 
+  Save
+} from 'lucide-react';
+import { db } from './firebase';
 import { 
   collection, 
   addDoc, 
@@ -38,11 +47,32 @@ export default function TradingCardTracker() {
     dateSold: ""
   });
   
+  // State for card editing
+  const [editingCard, setEditingCard] = useState(null);
+  
   // State for new misc supply
   const [newMiscSupply, setNewMiscSupply] = useState({
     name: "",
     price: 0
   });
+  
+  // State for delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState(null);
+  
+  // State for shipping supplies editor modal
+  const [showSuppliesModal, setShowSuppliesModal] = useState(false);
+  
+  // State for new shipping supply
+  const [newSupply, setNewSupply] = useState({
+    name: "",
+    quantity: 0,
+    cost: 0,
+    total: 0
+  });
+  
+  // State for supply editing
+  const [editingSupply, setEditingSupply] = useState(null);
   
   // Search and pagination states
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,6 +82,7 @@ export default function TradingCardTracker() {
   // Modal states
   const [showAddCardModal, setShowAddCardModal] = useState(false);
   const [showMiscSuppliesModal, setShowMiscSuppliesModal] = useState(false);
+  const [showEditCardModal, setShowEditCardModal] = useState(false);
   
   // Loading state
   const [loading, setLoading] = useState(true);
@@ -167,6 +198,41 @@ export default function TradingCardTracker() {
     }
   };
   
+  // Function to handle edit button click
+  const handleEditCard = (card) => {
+    setEditingCard({...card});
+    setShowEditCardModal(true);
+  };
+  
+  // Function to save edited card
+  const saveEditedCard = async () => {
+    if (!editingCard || !editingCard.id) return;
+    
+    try {
+      const cardDoc = doc(db, "cards", editingCard.id);
+      
+      // Handle status changes
+      const updates = {...editingCard};
+      updates.isSold = updates.status === "sold";
+      
+      // If moved to sold and no sold date, set it
+      if (updates.status === "sold" && !updates.dateSold) {
+        updates.dateSold = new Date().toISOString().split('T')[0];
+      }
+      
+      // If moved from sold, clear sold date
+      if (updates.status !== "sold") {
+        updates.dateSold = "";
+      }
+      
+      await updateDoc(cardDoc, updates);
+      setShowEditCardModal(false);
+      setEditingCard(null);
+    } catch (error) {
+      console.error("Error updating card: ", error);
+    }
+  };
+  
   // Function to add a new misc supply to Firebase
   const addMiscSupply = async () => {
     if (newMiscSupply.name.trim() === "") return;
@@ -184,6 +250,65 @@ export default function TradingCardTracker() {
       });
     } catch (error) {
       console.error("Error adding misc supply: ", error);
+    }
+  };
+  
+  // Function to add a new shipping supply
+  const addSupply = async () => {
+    if (newSupply.name.trim() === "") return;
+    
+    try {
+      const suppliesCollection = collection(db, "supplies");
+      
+      // Calculate total from quantity and cost
+      const total = parseFloat(newSupply.quantity) * parseFloat(newSupply.cost);
+      
+      await addDoc(suppliesCollection, {
+        name: newSupply.name,
+        quantity: parseInt(newSupply.quantity),
+        cost: parseFloat(newSupply.cost),
+        total: parseFloat(total.toFixed(2))
+      });
+      
+      setNewSupply({
+        name: "",
+        quantity: 0,
+        cost: 0,
+        total: 0
+      });
+    } catch (error) {
+      console.error("Error adding supply: ", error);
+    }
+  };
+  
+  // Function to update shipping supply
+  const saveEditedSupply = async () => {
+    if (!editingSupply || !editingSupply.id) return;
+    
+    try {
+      const supplyDoc = doc(db, "supplies", editingSupply.id);
+      
+      // Calculate new total
+      const newTotal = parseFloat(editingSupply.quantity) * parseFloat(editingSupply.cost);
+      const updates = {
+        ...editingSupply,
+        total: parseFloat(newTotal.toFixed(2))
+      };
+      
+      await updateDoc(supplyDoc, updates);
+      setEditingSupply(null);
+    } catch (error) {
+      console.error("Error updating supply: ", error);
+    }
+  };
+  
+  // Function to delete shipping supply
+  const deleteSupply = async (id) => {
+    try {
+      const supplyDoc = doc(db, "supplies", id);
+      await deleteDoc(supplyDoc);
+    } catch (error) {
+      console.error("Error deleting supply: ", error);
     }
   };
   
@@ -223,14 +348,30 @@ export default function TradingCardTracker() {
     }
   };
   
-  // Function to delete card from Firebase
-  const deleteCard = async (id) => {
+  // Function to initiate card deletion process
+  const initiateDeleteCard = (card) => {
+    setCardToDelete(card);
+    setShowDeleteConfirm(true);
+  };
+  
+  // Function to confirm and delete card from Firebase
+  const confirmDeleteCard = async () => {
+    if (!cardToDelete || !cardToDelete.id) return;
+    
     try {
-      const cardDoc = doc(db, "cards", id);
+      const cardDoc = doc(db, "cards", cardToDelete.id);
       await deleteDoc(cardDoc);
+      setShowDeleteConfirm(false);
+      setCardToDelete(null);
     } catch (error) {
       console.error("Error deleting card: ", error);
     }
+  };
+  
+  // Function to cancel card deletion
+  const cancelDeleteCard = () => {
+    setShowDeleteConfirm(false);
+    setCardToDelete(null);
   };
   
   // Function to update supply quantity in Firebase
@@ -298,7 +439,7 @@ export default function TradingCardTracker() {
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Trading Card Tracker</h1>
+      <h1 className="text-2xl font-bold mb-6">Trading Card Sales Tracker</h1>
       
       {/* Tab Navigation */}
       <div className="flex mb-4">
@@ -306,7 +447,7 @@ export default function TradingCardTracker() {
           className={`px-4 py-2 rounded mr-2 ${activeTab === 'sales' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
           onClick={() => setActiveTab('sales')}
         >
-          Sold
+          Sales
         </button>
         <button 
           className={`px-4 py-2 rounded mr-2 ${activeTab === 'forSale' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
@@ -356,21 +497,21 @@ export default function TradingCardTracker() {
           <h2 className="text-xl font-semibold mb-4">Sold Cards</h2>
           
           {/* Card list header */}
-          <div className="grid grid-cols-7 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
+          <div className="grid grid-cols-8 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
             <div>Name</div>
             <div>Bought For</div>
             <div>Sold For</div>
             <div>Profit</div>
             <div>Date Bought</div>
             <div>Date Sold</div>
-            <div>Actions</div>
+            <div colSpan="2">Actions</div>
           </div>
           
           {/* Card list */}
           <div className="mb-4">
             {currentCards.length > 0 ? (
               currentCards.map(card => (
-                <div key={card.id} className="grid grid-cols-7 gap-2 p-2 border-b items-center">
+                <div key={card.id} className="grid grid-cols-8 gap-2 p-2 border-b items-center">
                   <div>{card.name}</div>
                   <div>${card.boughtFor.toFixed(2)}</div>
                   <div>${card.soldFor.toFixed(2)}</div>
@@ -381,7 +522,15 @@ export default function TradingCardTracker() {
                   <div>{card.dateSold}</div>
                   <div>
                     <button
-                      onClick={() => deleteCard(card.id)}
+                      onClick={() => handleEditCard(card)}
+                      className="text-blue-500 mr-2"
+                    >
+                      <Edit size={20} />
+                    </button>
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => initiateDeleteCard(card)}
                       className="text-red-500"
                     >
                       <Trash2 size={20} />
@@ -394,9 +543,18 @@ export default function TradingCardTracker() {
             )}
           </div>
           
-         {/* Shipping supplies section */}
-         <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Shipping Supplies</h2>
+          {/* Shipping supplies section */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Shipping Supplies</h2>
+              <button
+                onClick={() => setShowSuppliesModal(true)}
+                className="bg-blue-500 text-white px-3 py-1 rounded text-sm flex items-center"
+              >
+                <Edit size={16} className="mr-1" />
+                Edit Supplies
+              </button>
+            </div>
             
             {/* Supplies list */}
             <div className="bg-gray-100 p-4 rounded">
@@ -463,26 +621,26 @@ export default function TradingCardTracker() {
         </div>
       )}
       
-{/* For Sale Tab Content */}
-{activeTab === 'forSale' && (
+      {/* For Sale Tab Content */}
+      {activeTab === 'forSale' && (
         <div className="mb-8">
           <h2 className="text-xl font-semibold mb-4">Cards For Sale</h2>
           
           {/* Card list header */}
-          <div className="grid grid-cols-6 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
+          <div className="grid grid-cols-7 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
             <div>Name</div>
             <div>Bought For</div>
             <div>Sold For</div>
             <div>Date Bought</div>
             <div>Status</div>
-            <div>Actions</div>
+            <div colSpan="2">Actions</div>
           </div>
           
           {/* Card list */}
           <div className="mb-4">
             {currentCards.length > 0 ? (
               currentCards.map(card => (
-                <div key={card.id} className="grid grid-cols-6 gap-2 p-2 border-b items-center">
+                <div key={card.id} className="grid grid-cols-7 gap-2 p-2 border-b items-center">
                   <div>{card.name}</div>
                   <div>${card.boughtFor.toFixed(2)}</div>
                   <div>
@@ -505,17 +663,20 @@ export default function TradingCardTracker() {
                       <option value="keeping">Keeping</option>
                     </select>
                   </div>
-                  <div className="flex">
+                  <div>
                     <button
-                      onClick={() => updateCard(card.id, { status: "sold", dateSold: new Date().toISOString().split('T')[0] })}
+                      onClick={() => handleEditCard(card)}
                       className="text-blue-500 mr-2"
-                      title="Mark as Sold"
+                      title="Edit Card"
                     >
-                      <ArrowRight size={20} />
+                      <Edit size={20} />
                     </button>
+                  </div>
+                  <div>
                     <button
-                      onClick={() => deleteCard(card.id)}
+                      onClick={() => initiateDeleteCard(card)}
                       className="text-red-500"
+                      title="Delete Card"
                     >
                       <Trash2 size={20} />
                     </button>
@@ -535,32 +696,35 @@ export default function TradingCardTracker() {
           <h2 className="text-xl font-semibold mb-4">Cards I'm Keeping</h2>
           
           {/* Card list header */}
-          <div className="grid grid-cols-4 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
+          <div className="grid grid-cols-5 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
             <div>Name</div>
             <div>Bought For</div>
             <div>Date Bought</div>
-            <div>Actions</div>
+            <div colSpan="2">Actions</div>
           </div>
           
           {/* Card list */}
           <div className="mb-4">
             {currentCards.length > 0 ? (
               currentCards.map(card => (
-                <div key={card.id} className="grid grid-cols-4 gap-2 p-2 border-b items-center">
+                <div key={card.id} className="grid grid-cols-5 gap-2 p-2 border-b items-center">
                   <div>{card.name}</div>
                   <div>${card.boughtFor.toFixed(2)}</div>
                   <div>{card.dateBought}</div>
-                  <div className="flex">
+                  <div>
                     <button
-                      onClick={() => updateCard(card.id, { status: "forSale" })}
+                      onClick={() => handleEditCard(card)}
                       className="text-blue-500 mr-2"
-                      title="Move to For Sale"
+                      title="Edit Card"
                     >
-                      <ArrowRight size={20} />
+                      <Edit size={20} />
                     </button>
+                  </div>
+                  <div>
                     <button
-                      onClick={() => deleteCard(card.id)}
+                      onClick={() => initiateDeleteCard(card)}
                       className="text-red-500"
+                      title="Delete Card"
                     >
                       <Trash2 size={20} />
                     </button>
