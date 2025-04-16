@@ -11,7 +11,7 @@ import {
   Edit, 
   Save
 } from 'lucide-react';
-import { db } from './firebase';
+import { db } from '../firebase';
 import { 
   collection, 
   addDoc, 
