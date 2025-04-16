@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/trading-card-tracker/static/css/main.144bcf3d.css",
-    "main.js": "/trading-card-tracker/static/js/main.532fbd70.js",
+    "main.css": "/trading-card-tracker/static/css/main.407811fa.css",
+    "main.js": "/trading-card-tracker/static/js/main.b8437b8c.js",
     "index.html": "/trading-card-tracker/index.html",
-    "main.144bcf3d.css.map": "/trading-card-tracker/static/css/main.144bcf3d.css.map",
-    "main.532fbd70.js.map": "/trading-card-tracker/static/js/main.532fbd70.js.map"
+    "main.407811fa.css.map": "/trading-card-tracker/static/css/main.407811fa.css.map",
+    "main.b8437b8c.js.map": "/trading-card-tracker/static/js/main.b8437b8c.js.map"
   },
   "entrypoints": [
-    "static/css/main.144bcf3d.css",
-    "static/js/main.532fbd70.js"
+    "static/css/main.407811fa.css",
+    "static/js/main.b8437b8c.js"
   ]
 }
