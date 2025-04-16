@@ -686,7 +686,7 @@ export default function TradingCardTracker() {
       {/* Keeping Tab Content */}
       {activeTab === 'keeping' && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Cards I'm Keeping</h2>
+          <h2 className="text-xl font-semibold mb-4">Cards Not For Sale</h2>
           
           {/* Card list header */}
           <div className="grid grid-cols-5 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
