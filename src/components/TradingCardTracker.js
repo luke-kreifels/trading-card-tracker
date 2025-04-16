@@ -991,6 +991,15 @@ export default function TradingCardTracker() {
                     </>
                   )}
                 </div>
+                <div className="col-span-1 md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Notes</label>
+              <textarea
+                className="p-2 border rounded w-full h-24"
+                value={currentEditCard.notes || ""}
+                onChange={(e) => setCurrentEditCard({...currentEditCard, notes: e.target.value})}
+                placeholder="Add any details about condition, rarity, or other information..."
+                  />
+                </div>
                 
                 <div className="flex justify-end">
                   <button
@@ -1010,15 +1019,6 @@ export default function TradingCardTracker() {
                   </button>
                 </div>
               </div>
-              <div className="col-span-1 md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Notes</label>
-              <textarea
-                className="p-2 border rounded w-full h-24"
-                value={currentEditCard.notes || ""}
-                onChange={(e) => setCurrentEditCard({...currentEditCard, notes: e.target.value})}
-                placeholder="Add any details about condition, rarity, or other information..."
-              />
-            </div>
             </div>
           )}
           
