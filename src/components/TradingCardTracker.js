@@ -404,17 +404,7 @@ export default function TradingCardTracker() {
     
     initializeSupplies();
   }, []);
-  
-  // Calculate pagination
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = sortedCards.slice(indexOfFirstCard, indexOfLastCard);
-  const totalPages = Math.ceil(sortedCards.length / cardsPerPage);
 
-  // Function to change page
-  const paginate = (pageNumber) => {
-    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
-  };
 
   // Function to open edit card modal
   const openEditCardModal = (card) => {
@@ -502,6 +492,16 @@ export default function TradingCardTracker() {
     }
   });
 
+  // Calculate pagination
+  const indexOfLastCard = currentPage * cardsPerPage;
+  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
+  const currentCards = sortedCards.slice(indexOfFirstCard, indexOfLastCard);
+  const totalPages = Math.ceil(sortedCards.length / cardsPerPage);
+
+  // Function to change page
+  const paginate = (pageNumber) => {
+    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
+  };
   // Create a reusable SortableHeader component
   const SortableHeader = ({ field, label }) => {
     return (
