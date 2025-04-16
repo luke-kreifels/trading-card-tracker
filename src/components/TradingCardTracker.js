@@ -72,6 +72,74 @@ export default function TradingCardTracker() {
   
   // Loading state
   const [loading, setLoading] = useState(true);
+
+  // Calculate pagination
+  const indexOfLastCard = currentPage * cardsPerPage;
+  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
+  const currentCards = sortedCards.slice(indexOfFirstCard, indexOfLastCard);
+  const totalPages = Math.ceil(sortedCards.length / cardsPerPage);
+
+  // Sort state variables
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  // Sort handler function
+  const handleSort = (field) => {
+    // If clicking the same field, toggle direction
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Apply sorting to filtered cards
+  const sortedCards = [...filteredCards].sort((a, b) => {
+    // Special case for profit (calculated field)
+    if (sortField === 'profit') {
+      const profitA = a.soldFor - a.boughtFor;
+      const profitB = b.soldFor - b.boughtFor;
+      return sortDirection === 'asc' ? profitA - profitB : profitB - profitA;
+    }
+    
+    // Handle different data types
+    if (sortField === 'name') {
+      return sortDirection === 'asc' 
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name);
+    } else if (sortField === 'dateBought' || sortField === 'dateSold') {
+      // Handle dates
+      const dateA = a[sortField] ? new Date(a[sortField]) : new Date(0);
+      const dateB = b[sortField] ? new Date(b[sortField]) : new Date(0);
+      return sortDirection === 'asc' 
+        ? dateA - dateB 
+        : dateB - dateA;
+    } else {
+      // Handle numeric fields
+      return sortDirection === 'asc' 
+        ? a[sortField] - b[sortField] 
+        : b[sortField] - a[sortField];
+    }
+  });
+
+  // Create a reusable SortableHeader component
+  const SortableHeader = ({ field, label }) => {
+    return (
+      <div 
+        className="cursor-pointer select-none flex items-center" 
+        onClick={() => handleSort(field)}
+      >
+        {label}
+        {sortField === field && (
+          <span className="ml-1">
+            {sortDirection === 'asc' ? '▲' : '▼'}
+          </span>
+        )}
+      </div>
+    );
+  };
   
   // Fetch data from Firebase
   useEffect(() => {
@@ -143,12 +211,6 @@ export default function TradingCardTracker() {
     
     return matchesTab && matchesSearch;
   });
-  
-  // Calculate pagination
-  const indexOfLastCard = currentPage * cardsPerPage;
-  const indexOfFirstCard = indexOfLastCard - cardsPerPage;
-  const currentCards = filteredCards.slice(indexOfFirstCard, indexOfLastCard);
-  const totalPages = Math.ceil(filteredCards.length / cardsPerPage);
   
   // Function to add a new card to Firebase
   const addCard = async () => {
@@ -518,12 +580,12 @@ export default function TradingCardTracker() {
           
           {/* Card list header */}
           <div className="grid grid-cols-8 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
-            <div>Name</div>
-            <div>Bought For</div>
-            <div>Sold For</div>
-            <div>Profit</div>
-            <div>Date Bought</div>
-            <div>Date Sold</div>
+            <SortableHeader field="name" label="Name" />
+            <SortableHeader field="boughtFor" label="Bought For" />
+            <SortableHeader field="soldFor" label="Sold For" />
+            <SortableHeader field="profit" label="Profit" />
+            <SortableHeader field="dateBought" label="Date Bought" />
+            <SortableHeader field="dateSold" label="Date Sold" />
             <div colSpan={2}>Actions</div>
           </div>
           
@@ -652,10 +714,10 @@ export default function TradingCardTracker() {
           
           {/* Card list header */}
           <div className="grid grid-cols-7 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
-            <div>Name</div>
-            <div>Bought For</div>
-            <div>Sold For</div>
-            <div>Date Bought</div>
+            <SortableHeader field="name" label="Name" />
+            <SortableHeader field="boughtFor" label="Bought For" />
+            <SortableHeader field="soldFor" label="Sold For" />
+            <SortableHeader field="dateBought" label="Date Bought" />
             <div>Status</div>
             <div colSpan={2}>Actions</div>
           </div>
@@ -729,11 +791,12 @@ export default function TradingCardTracker() {
           
           {/* Card list header */}
           <div className="grid grid-cols-5 gap-2 font-semibold mb-2 p-2 bg-gray-200 rounded">
-            <div>Name</div>
-            <div>Bought For</div>
-            <div>Date Bought</div>
+            <SortableHeader field="name" label="Name" />
+            <SortableHeader field="boughtFor" label="Bought For" />
+            <SortableHeader field="dateBought" label="Date Bought" />
             <div colSpan={2}>Actions</div>
           </div>
+
           
           {/* Card list */}
           <div className="mb-4">
