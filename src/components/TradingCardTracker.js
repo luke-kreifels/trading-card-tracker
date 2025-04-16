@@ -35,7 +35,8 @@ export default function TradingCardTracker() {
     soldFor: 0,
     status: "forSale",
     dateBought: new Date().toISOString().split('T')[0],
-    dateSold: ""
+    dateSold: "",
+    notes: ""
   });
   
   // State for new misc supply
@@ -165,7 +166,8 @@ export default function TradingCardTracker() {
         isSold: isSold,
         status: newCard.status,
         dateBought: newCard.dateBought,
-        dateSold: isSold ? newCard.dateSold : ""
+        dateSold: isSold ? newCard.dateSold : "",
+        notes: newCard.notes || "" // Add notes to the document
       });
       
       setNewCard({
@@ -174,7 +176,8 @@ export default function TradingCardTracker() {
         soldFor: 0,
         status: "forSale",
         dateBought: new Date().toISOString().split('T')[0],
-        dateSold: ""
+        dateSold: "",
+        notes: "" // Reset notes
       });
       
       setShowAddCardModal(false);
@@ -422,6 +425,35 @@ export default function TradingCardTracker() {
         <h1 className="text-2xl font-bold mb-6">Loading...</h1>
       </div>
     );
+
+    const CardNotes = ({ notes }) => {
+      const [showNotes, setShowNotes] = useState(false);
+      
+      return (
+        <div className="relative">
+          <button
+            onMouseEnter={() => setShowNotes(true)}
+            onMouseLeave={() => setShowNotes(false)}
+            className="text-gray-500 hover:text-blue-500"
+            title="View Notes"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+          </button>
+          
+          {showNotes && (
+            <div className="absolute z-10 w-64 p-3 bg-white border rounded shadow-lg right-0 transform translate-x-6">
+              <div className="text-sm whitespace-pre-wrap">{notes}</div>
+            </div>
+          )}
+        </div>
+      );
+    };
   }
 
   return (
@@ -508,21 +540,24 @@ export default function TradingCardTracker() {
                   <div>{card.dateBought}</div>
                   <div>{card.dateSold}</div>
                   <div className="flex">
-                    <button
-                      onClick={() => openEditCardModal(card)}
-                      className="text-blue-500 mr-2"
-                      title="Edit Card"
-                    >
-                      <Edit2 size={20} />
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(card.id, 'card')}
-                      className="text-red-500"
-                      title="Delete Card"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => openEditCardModal(card)}
+                    className="text-blue-500 mr-2"
+                    title="Edit Card"
+                  >
+                    <Edit2 size={20} />
+                  </button>
+                  {card.notes && card.notes.trim() !== "" && (
+                    <CardNotes notes={card.notes} />
+                  )}
+                  <button
+                    onClick={() => confirmDelete(card.id, 'card')}
+                    className="text-red-500 ml-2"
+                    title="Delete Card"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
                 </div>
               ))
             ) : (
@@ -652,28 +687,31 @@ export default function TradingCardTracker() {
                     </select>
                   </div>
                   <div className="flex col-span-2">
-                    <button
-                      onClick={() => updateCard(card.id, { status: "sold", dateSold: new Date().toISOString().split('T')[0] })}
-                      className="text-blue-500 mr-2"
-                      title="Mark as Sold"
-                    >
-                      <ArrowRight size={20} />
-                    </button>
-                    <button
-                      onClick={() => openEditCardModal(card)}
-                      className="text-blue-500 mr-2"
-                      title="Edit Card"
-                    >
-                      <Edit2 size={20} />
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(card.id, 'card')}
-                      className="text-red-500"
-                      title="Delete Card"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => updateCard(card.id, { status: "sold", dateSold: new Date().toISOString().split('T')[0] })}
+                    className="text-blue-500 mr-2"
+                    title="Mark as Sold"
+                  >
+                    <ArrowRight size={20} />
+                  </button>
+                  <button
+                    onClick={() => openEditCardModal(card)}
+                    className="text-blue-500 mr-2"
+                    title="Edit Card"
+                  >
+                    <Edit2 size={20} />
+                  </button>
+                  {card.notes && card.notes.trim() !== "" && (
+                    <CardNotes notes={card.notes} />
+                  )}
+                  <button
+                    onClick={() => confirmDelete(card.id, 'card')}
+                    className="text-red-500 ml-2"
+                    title="Delete Card"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
                 </div>
               ))
             ) : (
@@ -705,28 +743,31 @@ export default function TradingCardTracker() {
                   <div>${card.boughtFor.toFixed(2)}</div>
                   <div>{card.dateBought}</div>
                   <div className="flex col-span-2">
-                    <button
-                      onClick={() => updateCard(card.id, { status: "forSale" })}
-                      className="text-blue-500 mr-2"
-                      title="Move to For Sale"
-                    >
-                      <ArrowRight size={20} />
-                    </button>
-                    <button
-                      onClick={() => openEditCardModal(card)}
-                      className="text-blue-500 mr-2"
-                      title="Edit Card"
-                    >
-                      <Edit2 size={20} />
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(card.id, 'card')}
-                      className="text-red-500"
-                      title="Delete Card"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => updateCard(card.id, { status: "forSale" })}
+                    className="text-blue-500 mr-2"
+                    title="Move to For Sale"
+                  >
+                    <ArrowRight size={20} />
+                  </button>
+                  <button
+                    onClick={() => openEditCardModal(card)}
+                    className="text-blue-500 mr-2"
+                    title="Edit Card"
+                  >
+                    <Edit2 size={20} />
+                  </button>
+                  {card.notes && card.notes.trim() !== "" && (
+                    <CardNotes notes={card.notes} />
+                  )}
+                  <button
+                    onClick={() => confirmDelete(card.id, 'card')}
+                    className="text-red-500 ml-2"
+                    title="Delete Card"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
                 </div>
               ))
             ) : (
@@ -855,6 +896,15 @@ export default function TradingCardTracker() {
                   </button>
                 </div>
               </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
+                <textarea
+                  className="p-2 border rounded w-full h-24"
+                  value={newCard.notes}
+                  onChange={(e) => setNewCard({...newCard, notes: e.target.value})}
+                  placeholder="Add any details about condition, rarity, or other information..."
+                />
+              </div>
             </div>
           )}
     
@@ -958,6 +1008,15 @@ export default function TradingCardTracker() {
                     Save Changes
                   </button>
                 </div>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium mb-1">Notes</label>
+                <textarea
+                  className="p-2 border rounded w-full h-24"
+                  value={currentEditCard.notes || ""}
+                  onChange={(e) => setCurrentEditCard({...currentEditCard, notes: e.target.value})}
+                  placeholder="Add any details about condition, rarity, or other information..."
+                />
               </div>
             </div>
           )}
